@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import BillingManagerView from "@/components/admin/BillingManagerView";
 import CatalogManagerView from "@/components/admin/CatalogManagerView";
 import DashboardView from "@/components/admin/DashboardView";
+import NotificationsView from "@/components/admin/NotificationsView";
 import OperationsView from "@/components/admin/OperationsView";
 import PromptJsonUploader from "@/components/admin/PromptJsonUploader";
 import PromptsManagerView from "@/components/admin/PromptsManagerView";
@@ -339,9 +340,7 @@ export function App() {
           <OperationsView key="blog-tab" initialTab="blog" />
         )}
 
-        {activeTab === "notifications" && (
-          <OperationsView key="notif-tab" initialTab="notifications" />
-        )}
+        {activeTab === "notifications" && <NotificationsView />}
       </main>
 
       {showProfileModal && (

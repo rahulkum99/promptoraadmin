@@ -10,6 +10,8 @@ import { refreshTokensSingleFlight } from "@/store/adminuserApi";
 import { store } from "@/store";
 import type {
   AdminBlogPost,
+  AdminBroadcastRequest,
+  AdminBroadcastResult,
   AdminCategory,
   AdminCreatorProfile,
   AdminCreditPackage,
@@ -26,12 +28,12 @@ import type {
   AdminUser,
   AdminWeeklyTheme,
   ApiSuccess,
-  BroadcastNotificationPayload,
   BulkPromptActionType,
   PlatformSettings,
   PlatformSettingsPatch,
   PromptJsonPayload,
 } from "@/types/adminuser";
+import { sanitizeBroadcastRequest } from "@/types/adminuser";
 
 export function getApiOrigin(): string {
   const fromStore = store.getState()?.auth?.apiOrigin;
@@ -1195,7 +1197,7 @@ export async function deleteAdminBlogPost(accessToken: string, slug: string) {
 
 export async function broadcastAdminNotification(
   accessToken: string,
-  payload: BroadcastNotificationPayload
+  payload: AdminBroadcastRequest
 ) {
   const res = await fetchWithAuthRetry(`${getApiBase()}/notifications/broadcast/`, {
     method: "POST",
@@ -1203,7 +1205,7 @@ export async function broadcastAdminNotification(
       Authorization: `Bearer ${accessToken}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(sanitizeBroadcastRequest(payload)),
   });
-  return handleResponse<Record<string, unknown>>(res);
+  return handleResponse<AdminBroadcastResult>(res);
 }

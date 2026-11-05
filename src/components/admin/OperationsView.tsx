@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import {
   extractRtkError,
-  useBroadcastAdminNotificationMutation,
   useCancelAdminGenerationMutation,
   useCreateAdminBlogPostMutation,
   useDeleteAdminBlogPostMutation,
@@ -13,13 +12,11 @@ import {
 import type { AdminBlogPost, AdminGeneration } from "@/types/adminuser";
 
 type Props = {
-  initialTab?: "generations" | "blog" | "notifications";
+  initialTab?: "generations" | "blog";
 };
 
 export default function OperationsView({ initialTab = "generations" }: Props) {
-  const [subTab, setSubTab] = useState<
-    "generations" | "blog" | "notifications"
-  >(initialTab);
+  const [subTab, setSubTab] = useState<"generations" | "blog">(initialTab);
   const [error, setError] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
@@ -53,15 +50,6 @@ export default function OperationsView({ initialTab = "generations" }: Props) {
   const [editBlogMetaDesc, setEditBlogMetaDesc] = useState<string>("");
   const [editBlogCover, setEditBlogCover] = useState<File | null>(null);
 
-  // Broadcast notification state
-  const [notifTitle, setNotifTitle] = useState<string>("");
-  const [notifBody, setNotifBody] = useState<string>("");
-  const [notifTarget, setNotifTarget] = useState<"all" | "creators" | "staff">(
-    "all"
-  );
-  const [notifType, setNotifType] = useState<string>("admin_announcement");
-  const [notifUserIds, setNotifUserIds] = useState<string>("");
-
   // RTK Queries
   const {
     data: genRes,
@@ -86,8 +74,6 @@ export default function OperationsView({ initialTab = "generations" }: Props) {
     useUpdateAdminBlogPostMutation();
   const [deleteBlogPost] = useDeleteAdminBlogPostMutation();
   const [fetchBlogBySlug] = useLazyGetAdminBlogPostBySlugQuery();
-  const [broadcastNotification, { isLoading: isBroadcasting }] =
-    useBroadcastAdminNotificationMutation();
 
   const generations = genRes?.data ?? [];
   const blogPosts = blogRes?.data ?? [];
@@ -202,40 +188,13 @@ export default function OperationsView({ initialTab = "generations" }: Props) {
     }
   }
 
-  async function handleBroadcast(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setFeedback(null);
-    try {
-      const userIdsList = notifUserIds
-        .split(",")
-        .map((id) => id.trim())
-        .filter(Boolean);
-      const res = await broadcastNotification({
-        title: notifTitle,
-        body: notifBody,
-        target: notifTarget,
-        notification_type: notifType,
-        user_ids: userIdsList.length > 0 ? userIdsList : undefined,
-      }).unwrap();
-      setFeedback(
-        `Broadcast sent successfully! Response: ${JSON.stringify(res.data)}`
-      );
-      setNotifTitle("");
-      setNotifBody("");
-    } catch (err) {
-      setError(extractRtkError(err).message);
-    }
-  }
-
   return (
     <div className="section-stack">
       <div className="section-header-bar">
         <div>
-          <h1 className="section-title">Generations, SEO Blog & Broadcasts</h1>
+          <h1 className="section-title">Generations & SEO Blog</h1>
           <p className="section-subtitle">
-            Monitor AI image generations, publish SEO blog posts, and send
-            OneSignal / in-app push broadcasts via RTK Query
+            Monitor AI image generations and publish SEO blog posts via RTK Query
           </p>
         </div>
         <div className="tab-pills">
@@ -252,15 +211,6 @@ export default function OperationsView({ initialTab = "generations" }: Props) {
             onClick={() => setSubTab("blog")}
           >
             SEO Blog CMS
-          </button>
-          <button
-            type="button"
-            className={`tab-pill ${
-              subTab === "notifications" ? "active" : ""
-            }`}
-            onClick={() => setSubTab("notifications")}
-          >
-            Push Broadcasts
           </button>
         </div>
       </div>
@@ -670,96 +620,6 @@ export default function OperationsView({ initialTab = "generations" }: Props) {
             </form>
           </div>
         </div>
-      )}
-
-      {subTab === "notifications" && (
-        <form onSubmit={handleBroadcast} className="admin-card admin-form">
-          <h3 className="admin-card-title">
-            Send In-App & OneSignal Push Notification Broadcast
-          </h3>
-          <p className="admin-card-subtitle">
-            <code>POST /api/v1/adminuser/notifications/broadcast/</code>
-          </p>
-          <div className="form-grid-2">
-            <div>
-              <label className="form-label">Title *</label>
-              <input
-                type="text"
-                maxLength={160}
-                value={notifTitle}
-                onChange={(e) => setNotifTitle(e.target.value)}
-                placeholder="New Festive Portrait Prompts Live!"
-                className="form-input"
-                required
-              />
-            </div>
-            <div>
-              <label className="form-label">Audience Target</label>
-              <select
-                value={notifTarget}
-                onChange={(e) =>
-                  setNotifTarget(
-                    e.target.value as "all" | "creators" | "staff"
-                  )
-                }
-                className="form-select"
-              >
-                <option value="all">All Active Users (all)</option>
-                <option value="creators">Approved Creators (creators)</option>
-                <option value="staff">Staff & Admins (staff)</option>
-              </select>
-            </div>
-          </div>
-
-          <div>
-            <label className="form-label">
-              Notification Body (max 280 chars) *
-            </label>
-            <textarea
-              rows={3}
-              maxLength={280}
-              value={notifBody}
-              onChange={(e) => setNotifBody(e.target.value)}
-              placeholder="Explore our newly curated ultra-realistic Indian festive fashion prompts..."
-              className="form-textarea"
-              required
-            />
-          </div>
-
-          <div className="form-grid-2">
-            <div>
-              <label className="form-label">Notification Type</label>
-              <input
-                type="text"
-                value={notifType}
-                onChange={(e) => setNotifType(e.target.value)}
-                className="form-input"
-              />
-            </div>
-            <div>
-              <label className="form-label">
-                Specific User UUIDs (optional, comma-separated)
-              </label>
-              <input
-                type="text"
-                value={notifUserIds}
-                onChange={(e) => setNotifUserIds(e.target.value)}
-                placeholder="Leave blank to use target group"
-                className="form-input"
-              />
-            </div>
-          </div>
-
-          <div className="form-actions">
-            <button
-              type="submit"
-              disabled={isBroadcasting}
-              className="btn btn-primary"
-            >
-              {isBroadcasting ? "Sending..." : "Send Broadcast Now"}
-            </button>
-          </div>
-        </form>
       )}
     </div>
   );

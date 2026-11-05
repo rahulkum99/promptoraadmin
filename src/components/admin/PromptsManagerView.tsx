@@ -42,6 +42,8 @@ export default function PromptsManagerView({ onOpenUploader }: Props) {
   const [editJsonText, setEditJsonText] = useState<string>("");
   const [editPreviewFile, setEditPreviewFile] = useState<File | null>(null);
   const [extraImageFile, setExtraImageFile] = useState<File | null>(null);
+  const [copyingPromptId, setCopyingPromptId] = useState<string | null>(null);
+  const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
 
   const {
     data: res,
@@ -139,6 +141,68 @@ export default function PromptsManagerView({ onOpenUploader }: Props) {
       setFeedback(`Rejected prompt "${prompt.title}".`);
     } catch (err) {
       setError(extractRtkError(err).message);
+    }
+  }
+
+  function formatPromptCopyText(prompt: AdminPrompt): string {
+    const promptText = (prompt.prompt_text || "").trim();
+    const negativePrompt = (prompt.negative_prompt || "").trim();
+    if (promptText && negativePrompt) {
+      return `${promptText}\n\nNegative prompt:\n${negativePrompt}`;
+    }
+    return promptText || negativePrompt;
+  }
+
+  async function writeClipboard(text: string) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        return;
+      }
+    } catch {
+      // Fall through to execCommand when Clipboard API is blocked.
+    }
+    const area = document.createElement("textarea");
+    area.value = text;
+    area.setAttribute("readonly", "");
+    area.style.position = "fixed";
+    area.style.left = "-9999px";
+    document.body.appendChild(area);
+    area.select();
+    document.execCommand("copy");
+    document.body.removeChild(area);
+  }
+
+  async function handleCopyPrompt(prompt: AdminPrompt) {
+    setError(null);
+    setCopyingPromptId(prompt.id);
+    try {
+      let source = prompt;
+      if (!prompt.prompt_text?.trim() || prompt.negative_prompt == null) {
+        const detail = await fetchPromptBySlug(prompt.slug).unwrap();
+        source = detail.data;
+      }
+      const text = formatPromptCopyText(source);
+      if (!text) {
+        setError(
+          `No prompt text or negative prompt available for "${prompt.title}".`
+        );
+        return;
+      }
+      await writeClipboard(text);
+      setCopiedPromptId(prompt.id);
+      setFeedback(
+        `Copied prompt text and negative prompt for "${prompt.title}".`
+      );
+      window.setTimeout(() => {
+        setCopiedPromptId((current) =>
+          current === prompt.id ? null : current
+        );
+      }, 2000);
+    } catch (err) {
+      setError(extractRtkError(err).message || "Could not copy prompt.");
+    } finally {
+      setCopyingPromptId(null);
     }
   }
 
@@ -521,6 +585,18 @@ export default function PromptsManagerView({ onOpenUploader }: Props) {
                   </td>
                   <td>
                     <div className="btn-group">
+                      <button
+                        type="button"
+                        onClick={() => void handleCopyPrompt(prompt)}
+                        disabled={copyingPromptId === prompt.id}
+                        className="btn btn-secondary btn-xs"
+                      >
+                        {copyingPromptId === prompt.id
+                          ? "Copying..."
+                          : copiedPromptId === prompt.id
+                            ? "Copied"
+                            : "Copy Prompt"}
+                      </button>
                       <button
                         type="button"
                         onClick={() => openEditModal(prompt)}

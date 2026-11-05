@@ -421,11 +421,90 @@ export type AdminBlogPost = {
   };
 };
 
-export type BroadcastNotificationPayload = {
+export type NotificationType =
+  | "generation_completed"
+  | "credits"
+  | "promotional"
+  | "engagement"
+  | "admin_announcement";
+
+export type NotificationCategory = "transactional" | "marketing";
+
+export type BroadcastAudienceTarget = "all" | "creators" | "staff";
+
+export type AdminBroadcastRequest = {
   title: string;
   body: string;
-  notification_type?: string;
-  target?: "all" | "creators" | "staff";
+  notification_type?: NotificationType;
+  category?: NotificationCategory;
+  image_url?: string;
+  deep_link?: string;
+  target?: BroadcastAudienceTarget;
   user_ids?: string[];
-  payload?: Record<string, unknown>;
+  payload?: Record<string, string>;
 };
+
+export type BroadcastNotificationPayload = AdminBroadcastRequest;
+
+export type AdminBroadcastResult = {
+  recipient_count: number;
+  target: BroadcastAudienceTarget | "selected_users";
+  notification_type: NotificationType;
+  category: NotificationCategory;
+  title: string;
+  body: string;
+  image_url: string;
+  deep_link: string;
+};
+
+export const DEFAULT_NOTIFICATION_CATEGORY: Record<
+  NotificationType,
+  NotificationCategory
+> = {
+  generation_completed: "transactional",
+  credits: "transactional",
+  promotional: "marketing",
+  engagement: "marketing",
+  admin_announcement: "marketing",
+};
+
+/** Drop blank optional fields so the backend can fill defaults. */
+export function sanitizeBroadcastRequest(
+  req: AdminBroadcastRequest
+): AdminBroadcastRequest {
+  const body: AdminBroadcastRequest = {
+    title: req.title.trim(),
+    body: req.body.trim(),
+  };
+
+  if (req.notification_type) {
+    body.notification_type = req.notification_type;
+  }
+  if (req.category) {
+    body.category = req.category;
+  }
+
+  const imageUrl = req.image_url?.trim();
+  if (imageUrl) body.image_url = imageUrl;
+
+  const deepLink = req.deep_link?.trim();
+  if (deepLink) body.deep_link = deepLink;
+
+  const payloadEntries = Object.entries(req.payload ?? {}).filter(
+    ([key, value]) => key.trim() && value.trim()
+  );
+  if (payloadEntries.length > 0) {
+    body.payload = Object.fromEntries(payloadEntries);
+  }
+
+  const userIds = (req.user_ids ?? [])
+    .map((id) => id.trim())
+    .filter(Boolean);
+  if (userIds.length > 0) {
+    body.user_ids = userIds;
+  } else if (req.target) {
+    body.target = req.target;
+  }
+
+  return body;
+}

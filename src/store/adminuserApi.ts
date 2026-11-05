@@ -15,6 +15,8 @@ import {
 } from "@/store/authSlice";
 import type {
   AdminBlogPost,
+  AdminBroadcastRequest,
+  AdminBroadcastResult,
   AdminCategory,
   AdminCreatorProfile,
   AdminCreditPackage,
@@ -31,12 +33,12 @@ import type {
   AdminUser,
   AdminWeeklyTheme,
   ApiSuccess,
-  BroadcastNotificationPayload,
   BulkPromptActionType,
   PlatformSettings,
   PlatformSettingsPatch,
   PromptJsonPayload,
 } from "@/types/adminuser";
+import { sanitizeBroadcastRequest } from "@/types/adminuser";
 
 type RootStateWithAuth = {
   auth: AuthState;
@@ -1272,13 +1274,13 @@ export const adminUserApi = createApi({
     }),
 
     broadcastAdminNotification: builder.mutation<
-      ApiSuccess<Record<string, unknown>>,
-      BroadcastNotificationPayload
+      ApiSuccess<AdminBroadcastResult>,
+      AdminBroadcastRequest
     >({
       query: (payload) => ({
         url: "notifications/broadcast/",
         method: "POST",
-        body: payload,
+        body: sanitizeBroadcastRequest(payload),
       }),
     }),
   }),
